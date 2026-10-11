@@ -40,7 +40,7 @@ class GetProductsTest {
         second.setProductId(3);
         second.setProductName("Java book");
         second.setCategory(ProductCategory.E_BOOK);
-        when(dao.getProducts()).thenReturn(List.of(first, second));
+        when(dao.getProducts(null)).thenReturn(List.of(first, second));
 
         mvc.perform(get("/products"))
                 .andExpect(status().isOk())
@@ -48,15 +48,46 @@ class GetProductsTest {
                 .andExpect(jsonPath("$[0].productId").value(1))
                 .andExpect(jsonPath("$[0].category").value("FOOD"))
                 .andExpect(jsonPath("$[1].productName").value("Java book"));
-        verify(dao).getProducts();
+        verify(dao).getProducts(null);
     }
 
     @Test
     void returnsEmptyArrayWhenNoProductsExist() throws Exception {
-        when(dao.getProducts()).thenReturn(List.of());
+        when(dao.getProducts(null)).thenReturn(List.of());
         mvc.perform(get("/products"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
-        verify(dao).getProducts();
+        verify(dao).getProducts(null);
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(ProductCategory.class)
+    void filtersByCategory(ProductCategory category) throws Exception {
+        Product product = new Product();
+        product.setProductId(1);
+        product.setCategory(category);
+        when(dao.getProducts(category)).thenReturn(List.of(product));
+
+        mvc.perform(get("/products").param("category", category.name()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].category").value(category.name()));
+        verify(dao).getProducts(category);
+    }
+
+    @Test
+    void returnsEmptyArrayWhenCategoryHasNoProducts() throws Exception {
+        when(dao.getProducts(ProductCategory.CAR)).thenReturn(List.of());
+        mvc.perform(get("/products").param("category", "CAR"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+    }
+
+    @Test
+    void rejectsUnknownCategory() throws Exception {
+        mvc.perform(get("/products").param("category", "ABC"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(dao);
+    }
+
 }

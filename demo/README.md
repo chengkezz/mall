@@ -90,4 +90,13 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 
 `GET http://localhost:8080/products`，不需要 Request Body。
 
-回傳 `200` 與全部商品的 JSON 陣列，沒有商品時回傳 `[]`。目前不提供篩選、排序或分頁，回傳順序不保證固定。
+回傳 `200` 與全部商品的 JSON 陣列，沒有商品時回傳 `[]`。可透過選填的 `category` 參數篩選分類，目前不提供排序或分頁，回傳順序不保證固定。
+
+分類查詢範例：
+
+- `GET /products`：全部商品。
+- `GET /products?category=FOOD`：食品。
+- `GET /products?category=CAR`：汽車。
+- `GET /products?category=E_BOOK`：電子書。
+
+分類名稱需符合 Enum 大小寫。非法分類回傳 `400`；分類沒有商品回傳 `200` 與 `[]`。

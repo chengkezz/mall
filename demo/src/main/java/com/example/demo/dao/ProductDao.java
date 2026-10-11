@@ -1,6 +1,7 @@
 package com.example.demo.dao;
 
 import com.example.demo.model.Product;
+import com.example.demo.constant.ProductCategory;
 import java.util.List;
 import com.example.demo.dto.ProductRequest;
 
@@ -13,5 +14,5 @@ public interface ProductDao {
 
     void deleteProduct(Integer productId);
 
-    List<Product> getProducts();
+    List<Product> getProducts(ProductCategory category);
 }

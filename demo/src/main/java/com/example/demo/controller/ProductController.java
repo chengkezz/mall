@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.Product;
+import com.example.demo.constant.ProductCategory;
 import java.util.List;
 import com.example.demo.dto.ProductRequest;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 public class ProductController {
@@ -63,8 +65,9 @@ public class ProductController {
     }
 
     @GetMapping("/products")
-    public ResponseEntity<List<Product>> getProducts() {
-        List<Product> productList = productService.getProducts();
+    public ResponseEntity<List<Product>> getProducts(
+            @RequestParam(name = "category", required = false) ProductCategory category) {
+        List<Product> productList = productService.getProducts(category);
         return ResponseEntity.status(HttpStatus.OK).body(productList);
     }
 }
