@@ -34,3 +34,9 @@
 | last_modified_date | TIMESTAMP NOT NULL |
 
 Controller 測試使用模擬的 Service；實際資料庫查詢需另外啟動 API 驗證。
+
+## 日期回傳格式
+
+商品的 `createdDate` 與 `lastModifiedDate` 以 GMT+8、`yyyy-MM-dd HH:mm:ss` 格式回傳，例如 `2022-03-01 02:41:28`。此設定只影響 JSON 日期呈現，不修改資料庫資料。
+
+若已有本機 `application.properties`，請同步加入範本中的 `spring.jackson.date-format` 與 `spring.jackson.time-zone` 設定，並重新啟動程式。
