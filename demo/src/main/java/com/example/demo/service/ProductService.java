@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.model.Product;
+import java.util.List;
 import com.example.demo.dto.ProductRequest;
 
 public interface ProductService {
@@ -11,4 +12,6 @@ public interface ProductService {
     void updateProduct(Integer productId, ProductRequest productRequest);
 
     void deleteProduct(Integer productId);
+
+    List<Product> getProducts();
 }
