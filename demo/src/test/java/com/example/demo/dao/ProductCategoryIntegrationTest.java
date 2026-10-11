@@ -25,13 +25,32 @@ class ProductCategoryIntegrationTest {
     @Test
     void matchesDatabaseForAllCategoriesAndUnfilteredList() {
         assertEquals(jdbc.queryForObject("SELECT COUNT(*) FROM product", Integer.class),
-                dao.getProducts(null).size());
+                dao.getProducts(null, null).size());
         for (ProductCategory category : ProductCategory.values()) {
-            List<Product> products = dao.getProducts(category);
+            List<Product> products = dao.getProducts(category, null);
             assertEquals(jdbc.queryForObject("SELECT COUNT(*) FROM product WHERE category = ?",
                     Integer.class, category.name()), products.size());
             assertTrue(products.stream().allMatch(p -> p.getCategory() == category));
         }
     }
 
+    @Test
+    void matchesDatabaseForKeywordAndCombinedFilters() {
+        for (String search : List.of("Java", "蘋果", "%", "_", "'", "no-match-7b9e12")) {
+            var expected = jdbc.queryForList(
+                    "SELECT product_id FROM product WHERE product_name LIKE ?", Integer.class,
+                    "%" + search + "%");
+            var actual = dao.getProducts(null, search).stream()
+                    .map(Product::getProductId).sorted().toList();
+            assertEquals(expected.stream().sorted().toList(), actual);
+            for (ProductCategory category : ProductCategory.values()) {
+                var filteredExpected = jdbc.queryForList(
+                        "SELECT product_id FROM product WHERE category = ? AND product_name LIKE ?",
+                        Integer.class, category.name(), "%" + search + "%");
+                var filteredActual = dao.getProducts(category, search).stream()
+                        .map(Product::getProductId).sorted().toList();
+                assertEquals(filteredExpected.stream().sorted().toList(), filteredActual);
+            }
+        }
+    }
 }

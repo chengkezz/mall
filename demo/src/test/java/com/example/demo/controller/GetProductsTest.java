@@ -40,7 +40,7 @@ class GetProductsTest {
         second.setProductId(3);
         second.setProductName("Java book");
         second.setCategory(ProductCategory.E_BOOK);
-        when(dao.getProducts(null)).thenReturn(List.of(first, second));
+        when(dao.getProducts(null, null)).thenReturn(List.of(first, second));
 
         mvc.perform(get("/products"))
                 .andExpect(status().isOk())
@@ -48,16 +48,16 @@ class GetProductsTest {
                 .andExpect(jsonPath("$[0].productId").value(1))
                 .andExpect(jsonPath("$[0].category").value("FOOD"))
                 .andExpect(jsonPath("$[1].productName").value("Java book"));
-        verify(dao).getProducts(null);
+        verify(dao).getProducts(null, null);
     }
 
     @Test
     void returnsEmptyArrayWhenNoProductsExist() throws Exception {
-        when(dao.getProducts(null)).thenReturn(List.of());
+        when(dao.getProducts(null, null)).thenReturn(List.of());
         mvc.perform(get("/products"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
-        verify(dao).getProducts(null);
+        verify(dao).getProducts(null, null);
     }
 
     @org.junit.jupiter.params.ParameterizedTest
@@ -66,18 +66,18 @@ class GetProductsTest {
         Product product = new Product();
         product.setProductId(1);
         product.setCategory(category);
-        when(dao.getProducts(category)).thenReturn(List.of(product));
+        when(dao.getProducts(category, null)).thenReturn(List.of(product));
 
         mvc.perform(get("/products").param("category", category.name()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].category").value(category.name()));
-        verify(dao).getProducts(category);
+        verify(dao).getProducts(category, null);
     }
 
     @Test
     void returnsEmptyArrayWhenCategoryHasNoProducts() throws Exception {
-        when(dao.getProducts(ProductCategory.CAR)).thenReturn(List.of());
+        when(dao.getProducts(ProductCategory.CAR, null)).thenReturn(List.of());
         mvc.perform(get("/products").param("category", "CAR"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
@@ -90,4 +90,31 @@ class GetProductsTest {
         verifyNoInteractions(dao);
     }
 
+    @Test
+    void searchesNameAndTrimsWhitespace() throws Exception {
+        Product product = new Product();
+        product.setProductName("Java book");
+        when(dao.getProducts(null, "Java")).thenReturn(List.of(product));
+        mvc.perform(get("/products").param("search", "  Java  "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].productName").value("Java book"));
+        verify(dao).getProducts(null, "Java");
+    }
+
+    @Test
+    void combinesCategoryAndSearch() throws Exception {
+        when(dao.getProducts(ProductCategory.FOOD, "apple")).thenReturn(List.of());
+        mvc.perform(get("/products").param("category", "FOOD").param("search", "apple"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+        verify(dao).getProducts(ProductCategory.FOOD, "apple");
+    }
+
+    @Test
+    void ignoresBlankSearchButKeepsCategory() throws Exception {
+        when(dao.getProducts(ProductCategory.CAR, null)).thenReturn(List.of());
+        mvc.perform(get("/products").param("category", "CAR").param("search", "   "))
+                .andExpect(status().isOk());
+        verify(dao).getProducts(ProductCategory.CAR, null);
+    }
 }

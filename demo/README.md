@@ -100,3 +100,8 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 - `GET /products?category=E_BOOK`：電子書。
 
 分類名稱需符合 Enum 大小寫。非法分類回傳 `400`；分類沒有商品回傳 `200` 與 `[]`。
+
+關鍵字查詢：`GET /products?search=Java`，搜尋商品名稱包含關鍵字的商品。
+可搭配分類：`GET /products?category=E_BOOK&search=Java`，兩個條件必須同時符合。
+`search` 會去除前後空白，空字串或純空白視為沒有關鍵字條件。
+搜尋使用 `LIKE '%關鍵字%'`，輸入的 `%`、`_` 保留 SQL 萬用字元意義。找不到商品仍回傳 `200` 與 `[]`。

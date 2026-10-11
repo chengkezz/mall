@@ -66,8 +66,9 @@ public class ProductController {
 
     @GetMapping("/products")
     public ResponseEntity<List<Product>> getProducts(
-            @RequestParam(name = "category", required = false) ProductCategory category) {
-        List<Product> productList = productService.getProducts(category);
+            @RequestParam(name = "category", required = false) ProductCategory category,
+            @RequestParam(name = "search", required = false) String search) {
+        List<Product> productList = productService.getProducts(category, search);
         return ResponseEntity.status(HttpStatus.OK).body(productList);
     }
 }

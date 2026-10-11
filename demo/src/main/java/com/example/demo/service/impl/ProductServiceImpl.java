@@ -71,7 +71,13 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<Product> getProducts(ProductCategory category) {
-        return productDao.getProducts(category);
+    public List<Product> getProducts(ProductCategory category, String search) {
+        if (search != null) {
+            search = search.strip();
+            if (search.isEmpty()) {
+                search = null;
+            }
+        }
+        return productDao.getProducts(category, search);
     }
 }
