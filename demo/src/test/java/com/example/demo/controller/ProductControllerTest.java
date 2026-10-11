@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.constant.ProductCategory;
 import com.example.demo.model.Product;
 import com.example.demo.service.ProductService;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,13 +31,15 @@ class ProductControllerTest {
         product.setProductId(1);
         product.setProductName("Apple");
         product.setPrice(30);
+        product.setCategory(ProductCategory.FOOD);
         when(productService.getProductById(1)).thenReturn(product);
 
         mockMvc.perform(get("/products/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productId").value(1))
                 .andExpect(jsonPath("$.productName").value("Apple"))
-                .andExpect(jsonPath("$.price").value(30));
+                .andExpect(jsonPath("$.price").value(30))
+                .andExpect(jsonPath("$.category").value("FOOD"));
         verify(productService).getProductById(1);
     }
 
