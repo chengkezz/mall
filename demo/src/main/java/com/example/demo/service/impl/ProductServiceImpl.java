@@ -22,6 +22,20 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Integer createProduct(ProductRequest productRequest) {
+        validateProductRequest(productRequest);
+        return productDao.createProduct(productRequest);
+    }
+
+    @Override
+    public void updateProduct(Integer productId, ProductRequest productRequest) {
+        validateProductRequest(productRequest);
+        int updatedRows = productDao.updateProduct(productId, productRequest);
+        if (updatedRows == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+        }
+    }
+
+    private void validateProductRequest(ProductRequest productRequest) {
         validateRequiredText(productRequest.getProductName(), "productName", 128);
         validateRequiredText(productRequest.getImageUrl(), "imageUrl", 256);
         if (productRequest.getCategory() == null) {
@@ -37,7 +51,6 @@ public class ProductServiceImpl implements ProductService {
         if (description != null && description.codePointCount(0, description.length()) > 1024) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "description must not exceed 1024 characters");
         }
-        return productDao.createProduct(productRequest);
     }
 
     private void validateRequiredText(String value, String field, int maxLength) {

@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.model.Product;
 import com.example.demo.dto.ProductRequest;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import com.example.demo.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,5 +35,22 @@ public class ProductController {
         Integer productId = productService.createProduct(productRequest);
         Product product = productService.getProductById(productId);
         return ResponseEntity.status(HttpStatus.CREATED).body(product);
+    }
+
+    @PutMapping("/products/{productId}")
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable Integer productId,
+            @RequestBody ProductRequest productRequest) {
+        Product product = productService.getProductById(productId);
+        if (product != null) {
+            productService.updateProduct(productId, productRequest);
+            Product updatedProduct = productService.getProductById(productId);
+            if (updatedProduct == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+            return ResponseEntity.status(HttpStatus.OK).body(updatedProduct);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 }

@@ -64,3 +64,16 @@ Controller 測試使用模擬的 Service；實際資料庫查詢需另外啟動 
 - 缺少必填欄位、不合法分類、負數或超過長度限制時回傳 `400`。
 
 執行 `MALL_DB_TEST=true ./mvnw test` 可額外驗證本機 MySQL 的新增與讀回。整合測試會回滾資料，但 MySQL 自增編號仍可能跳號；一般 `./mvnw test` 會跳過這項資料庫寫入測試。
+
+## 修改商品
+
+`PUT http://localhost:8080/products/{productId}`，Header 使用 `Content-Type: application/json`。
+
+Body 與新增商品相同，需提供全部必填欄位。省略 `description` 或傳入 null 會清空描述。
+
+- 成功回傳 `200` 與更新後完整商品 JSON。
+- 商品不存在回傳 `404`；存在商品的輸入未通過驗證回傳 `400`。
+- 保留商品 ID 與建立時間，更新最後修改時間（資料庫精度為秒）。
+- 同內容重複修改仍應成功；目前 MySQL 連線採預設的匹配筆數回報方式，請勿改成 `useAffectedRows=true`，避免將未變動資料誤判為不存在。
+
+`MALL_DB_TEST=true ./mvnw test` 也會驗證修改欄位、清空描述、建立時間保留、其他商品不受影響與重複修改。測試操作會回滾。
