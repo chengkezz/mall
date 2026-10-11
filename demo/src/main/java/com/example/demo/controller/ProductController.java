@@ -4,6 +4,7 @@ import com.example.demo.model.Product;
 import com.example.demo.dto.ProductRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import com.example.demo.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,5 +53,11 @@ public class ProductController {
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    @DeleteMapping("/products/{productId}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Integer productId) {
+        productService.deleteProduct(productId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

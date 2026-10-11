@@ -77,3 +77,11 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 - 同內容重複修改仍應成功；目前 MySQL 連線採預設的匹配筆數回報方式，請勿改成 `useAffectedRows=true`，避免將未變動資料誤判為不存在。
 
 `MALL_DB_TEST=true ./mvnw test` 也會驗證修改欄位、清空描述、建立時間保留、其他商品不受影響與重複修改。測試操作會回滾。
+
+## 刪除商品
+
+`DELETE http://localhost:8080/products/{productId}`，不需要 Request Body。
+
+直接刪除指定商品。無論商品存在、不存在或重複刪除，SQL 成功執行後都回傳 `204 No Content`，沒有回應內容。ID 不是整數時回傳 `400`；資料庫執行錯誤不會被當成刪除成功。
+
+`MALL_DB_TEST=true ./mvnw test` 會驗證刪除後查不到商品、其他商品仍存在，以及重複刪除回傳 204。只操作測試建立的商品，並在測試後回滾。

@@ -62,4 +62,9 @@ public class ProductServiceImpl implements ProductService {
                     field + " must not exceed " + maxLength + " characters");
         }
     }
+
+    @Override
+    public void deleteProduct(Integer productId) {
+        productDao.deleteProduct(productId);
+    }
 }
