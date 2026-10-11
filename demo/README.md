@@ -40,3 +40,27 @@ Controller 測試使用模擬的 Service；實際資料庫查詢需另外啟動 
 商品的 `createdDate` 與 `lastModifiedDate` 以 GMT+8、`yyyy-MM-dd HH:mm:ss` 格式回傳，例如 `2022-03-01 02:41:28`。此設定只影響 JSON 日期呈現，不修改資料庫資料。
 
 若已有本機 `application.properties`，請同步加入範本中的 `spring.jackson.date-format` 與 `spring.jackson.time-zone` 設定，並重新啟動程式。
+
+## 新增商品
+
+`POST http://localhost:8080/products`，Header 使用 `Content-Type: application/json`。
+
+```json
+{
+  "productName": "蘋果",
+  "category": "FOOD",
+  "imageUrl": "https://example.com/apple.jpg",
+  "price": 20,
+  "stock": 10,
+  "description": "這是來自澳洲的蘋果！"
+}
+```
+
+- 成功回傳 `201` 與完整商品 JSON，包含資料庫產生的 `productId` 和後端設定的時間。
+- `productName`、`imageUrl` 不可空白，分別最多 128、256 字元。
+- `category` 必填，使用 `FOOD`、`CAR` 或 `E_BOOK`。
+- `price`、`stock` 必填，使用非負整數。
+- `description` 可省略或為 null，最多 1024 字元。
+- 缺少必填欄位、不合法分類、負數或超過長度限制時回傳 `400`。
+
+執行 `MALL_DB_TEST=true ./mvnw test` 可額外驗證本機 MySQL 的新增與讀回。整合測試會回滾資料，但 MySQL 自增編號仍可能跳號；一般 `./mvnw test` 會跳過這項資料庫寫入測試。

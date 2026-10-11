@@ -1,6 +1,9 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.Product;
+import com.example.demo.dto.ProductRequest;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import com.example.demo.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,5 +27,12 @@ public class ProductController {
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    @PostMapping("/products")
+    public ResponseEntity<Product> createProduct(@RequestBody ProductRequest productRequest) {
+        Integer productId = productService.createProduct(productRequest);
+        Product product = productService.getProductById(productId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(product);
     }
 }
