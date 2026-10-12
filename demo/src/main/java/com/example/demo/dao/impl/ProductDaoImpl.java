@@ -120,15 +120,7 @@ public class ProductDaoImpl implements ProductDao {
                 """;
 
         Map<String, Object> map = new HashMap<>();
-        if (productQueryParams.getCategory() != null) {
-            sql += " AND category = :category";
-            map.put("category", productQueryParams.getCategory().name());
-        }
-
-        if (productQueryParams.getSearch() != null) {
-            sql += " AND product_name LIKE :search";
-            map.put("search", "%" + productQueryParams.getSearch() + "%");
-        }
+        sql = addFilteringSql(sql, map, productQueryParams);
 
         // 排序欄位與方向已由 Service 驗證允許值。
         sql += " ORDER BY " + productQueryParams.getOrderBy()
@@ -151,6 +143,14 @@ public class ProductDaoImpl implements ProductDao {
                 WHERE 1 = 1
                 """;
         Map<String, Object> map = new HashMap<>();
+        sql = addFilteringSql(sql, map, productQueryParams);
+        return namedParameterJdbcTemplate.queryForObject(sql, map, Integer.class);
+    }
+
+    private String addFilteringSql(
+            String sql,
+            Map<String, Object> map,
+            ProductQueryParams productQueryParams) {
         if (productQueryParams.getCategory() != null) {
             sql += " AND category = :category";
             map.put("category", productQueryParams.getCategory().name());
@@ -159,6 +159,6 @@ public class ProductDaoImpl implements ProductDao {
             sql += " AND product_name LIKE :search";
             map.put("search", "%" + productQueryParams.getSearch() + "%");
         }
-        return namedParameterJdbcTemplate.queryForObject(sql, map, Integer.class);
+        return sql;
     }
 }
