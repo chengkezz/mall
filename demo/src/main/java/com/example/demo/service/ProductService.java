@@ -1,9 +1,9 @@
 package com.example.demo.service;
 
 import com.example.demo.model.Product;
-import java.util.List;
 import com.example.demo.dto.ProductRequest;
 import com.example.demo.dto.ProductQueryParams;
+import com.example.demo.dto.Page;
 
 public interface ProductService {
     Product getProductById(Integer productId);
@@ -14,5 +14,5 @@ public interface ProductService {
 
     void deleteProduct(Integer productId);
 
-    List<Product> getProducts(ProductQueryParams productQueryParams);
+    Page<Product> getProducts(ProductQueryParams productQueryParams);
 }

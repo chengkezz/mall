@@ -5,9 +5,9 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Max;
 import org.springframework.validation.annotation.Validated;
 import com.example.demo.constant.ProductCategory;
-import java.util.List;
 import com.example.demo.dto.ProductRequest;
 import com.example.demo.dto.ProductQueryParams;
+import com.example.demo.dto.Page;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -70,7 +70,7 @@ public class ProductController {
     }
 
     @GetMapping("/products")
-    public ResponseEntity<List<Product>> getProducts(
+    public ResponseEntity<Page<Product>> getProducts(
             @RequestParam(name = "category", required = false) ProductCategory category,
             @RequestParam(name = "search", required = false) String search,
             @RequestParam(name = "orderBy", defaultValue = "created_date") String orderBy,
@@ -85,7 +85,7 @@ public class ProductController {
         productQueryParams.setLimit(limit);
         productQueryParams.setOffset(offset);
 
-        List<Product> productList = productService.getProducts(productQueryParams);
-        return ResponseEntity.status(HttpStatus.OK).body(productList);
+        Page<Product> page = productService.getProducts(productQueryParams);
+        return ResponseEntity.status(HttpStatus.OK).body(page);
     }
 }

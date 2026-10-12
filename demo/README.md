@@ -90,7 +90,7 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 
 `GET http://localhost:8080/products`，不需要 Request Body。
 
-回傳 `200` 與本頁商品的 JSON 陣列，沒有商品時回傳 `[]`。可透過選填的 `category` 參數篩選分類，預設每頁最多 5 筆，預設依建立時間由新到舊排序，同值依商品 ID 由小到大排序。
+回傳 `200` 與 `Page<Product>` 分頁物件，包含 `limit`、`offset`、`total`、`productlist`。可透過選填的 `category` 參數篩選分類，預設每頁最多 5 筆，預設依建立時間由新到舊排序，同值依商品 ID 由小到大排序。
 
 分類查詢範例：
 
@@ -99,12 +99,12 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 - `GET /products?category=CAR`：汽車。
 - `GET /products?category=E_BOOK`：電子書。
 
-分類名稱需符合 Enum 大小寫。非法分類回傳 `400`；分類沒有商品回傳 `200` 與 `[]`。
+分類名稱需符合 Enum 大小寫。非法分類回傳 `400`；分類沒有商品時回傳 `200`，`total` 為 0、`productlist` 為 `[]`。
 
 關鍵字查詢：`GET /products?search=Java`，搜尋商品名稱包含關鍵字的商品。
 可搭配分類：`GET /products?category=E_BOOK&search=Java`，兩個條件必須同時符合。
 `search` 會去除前後空白，空字串或純空白視為沒有關鍵字條件。
-搜尋使用 `LIKE '%關鍵字%'`，輸入的 `%`、`_` 保留 SQL 萬用字元意義。找不到商品仍回傳 `200` 與 `[]`。
+搜尋使用 `LIKE '%關鍵字%'`，輸入的 `%`、`_` 保留 SQL 萬用字元意義。找不到商品仍回傳 `200`，`total` 為 0、`productlist` 為 `[]`。
 
 ## 商品列表排序
 
@@ -120,4 +120,12 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 - `GET /products?limit=5&offset=5`：第二頁。
 - `GET /products?category=FOOD&search=蘋果&orderBy=price&sort=asc&limit=5&offset=0`：篩選、排序後分頁。
 
-`limit` 預設 5，範圍 1～100；`offset` 預設 0，必須大於等於 0。預設值只在 Controller 設定，DTO 不設定初始值。使用 `@Validated`、`@Min`、`@Max` 驗證，驗證失敗回傳 `400`。超過最後一頁回傳 `200` 與 `[]`，回應維持商品陣列，不包含總筆數。
+`limit` 預設 5，範圍 1～100；`offset` 預設 0，必須大於等於 0。預設值只在 Controller 設定，DTO 不設定初始值。使用 `@Validated`、`@Min`、`@Max` 驗證，驗證失敗回傳 `400`。超過最後一頁回傳 `200`，`productlist` 為 `[]`，`total` 仍保留符合條件的總筆數。
+
+### 分頁回應
+
+`GET /products` 現在回傳物件，而非直接回傳陣列。`total` 是符合分類與關鍵字條件的總筆數，不受 `limit`、`offset` 影響；`productlist` 是目前這一頁的完整商品資料。
+
+```json
+{"limit": 5, "offset": 10, "total": 7, "productlist": []}
+```

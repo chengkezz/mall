@@ -1,6 +1,8 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.ProductQueryParams;
+import com.example.demo.dto.Page;
+import com.example.demo.model.Product;
 import com.example.demo.service.ProductService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,15 @@ class ProductPaginationTest {
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
-        when(service.getProducts(any())).thenReturn(List.of());
+        when(service.getProducts(any())).thenAnswer(invocation -> {
+            ProductQueryParams params = invocation.getArgument(0);
+            Page<Product> page = new Page<>();
+            page.setLimit(params.getLimit());
+            page.setOffset(params.getOffset());
+            page.setTotal(0);
+            page.setProductlist(List.of());
+            return page;
+        });
     }
 
     @Test
@@ -40,7 +50,7 @@ class ProductPaginationTest {
         assertNull(params.getLimit());
         assertNull(params.getOffset());
         mvc.perform(get("/products")).andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(content().json("{\"limit\":5,\"offset\":0,\"total\":0,\"productlist\":[]}"));
         verify(service).getProducts(argThat(p -> p.getLimit() == 5 && p.getOffset() == 0));
     }
 

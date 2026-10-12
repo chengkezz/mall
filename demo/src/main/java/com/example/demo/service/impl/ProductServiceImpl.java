@@ -3,6 +3,7 @@ package com.example.demo.service.impl;
 import com.example.demo.dao.ProductDao;
 import com.example.demo.dto.ProductRequest;
 import com.example.demo.dto.ProductQueryParams;
+import com.example.demo.dto.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.demo.model.Product;
@@ -71,7 +72,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<Product> getProducts(ProductQueryParams productQueryParams) {
+    public Page<Product> getProducts(ProductQueryParams productQueryParams) {
         String search = productQueryParams.getSearch();
         if (search != null) {
             search = search.strip();
@@ -88,6 +89,14 @@ public class ProductServiceImpl implements ProductService {
         if (!"asc".equals(sort) && !"desc".equals(sort)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid sort");
         }
-        return productDao.getProducts(productQueryParams);
+        List<Product> productList = productDao.getProducts(productQueryParams);
+        Integer total = productDao.countProducts(productQueryParams);
+
+        Page<Product> page = new Page<>();
+        page.setLimit(productQueryParams.getLimit());
+        page.setOffset(productQueryParams.getOffset());
+        page.setTotal(total);
+        page.setProductlist(productList);
+        return page;
     }
 }

@@ -46,10 +46,10 @@ class GetProductsTest {
 
         mvc.perform(get("/products"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].productId").value(1))
-                .andExpect(jsonPath("$[0].category").value("FOOD"))
-                .andExpect(jsonPath("$[1].productName").value("Java book"));
+                .andExpect(jsonPath("$.productlist.length()").value(2))
+                .andExpect(jsonPath("$.productlist[0].productId").value(1))
+                .andExpect(jsonPath("$.productlist[0].category").value("FOOD"))
+                .andExpect(jsonPath("$.productlist[1].productName").value("Java book"));
         verify(dao).getProducts(matchingParams(null, null));
     }
 
@@ -58,7 +58,7 @@ class GetProductsTest {
         when(dao.getProducts(matchingParams(null, null))).thenReturn(List.of());
         mvc.perform(get("/products"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.productlist").isEmpty());
         verify(dao).getProducts(matchingParams(null, null));
     }
 
@@ -72,8 +72,8 @@ class GetProductsTest {
 
         mvc.perform(get("/products").param("category", category.name()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].category").value(category.name()));
+                .andExpect(jsonPath("$.productlist.length()").value(1))
+                .andExpect(jsonPath("$.productlist[0].category").value(category.name()));
         verify(dao).getProducts(matchingParams(category, null));
     }
 
@@ -82,7 +82,7 @@ class GetProductsTest {
         when(dao.getProducts(matchingParams(ProductCategory.CAR, null))).thenReturn(List.of());
         mvc.perform(get("/products").param("category", "CAR"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.productlist").isEmpty());
     }
 
     @Test
@@ -99,7 +99,7 @@ class GetProductsTest {
         when(dao.getProducts(matchingParams(null, "Java"))).thenReturn(List.of(product));
         mvc.perform(get("/products").param("search", "  Java  "))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].productName").value("Java book"));
+                .andExpect(jsonPath("$.productlist[0].productName").value("Java book"));
         verify(dao).getProducts(matchingParams(null, "Java"));
     }
 
@@ -108,7 +108,7 @@ class GetProductsTest {
         when(dao.getProducts(matchingParams(ProductCategory.FOOD, "apple"))).thenReturn(List.of());
         mvc.perform(get("/products").param("category", "FOOD").param("search", "apple"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.productlist").isEmpty());
         verify(dao).getProducts(matchingParams(ProductCategory.FOOD, "apple"));
     }
 
@@ -150,5 +150,31 @@ class GetProductsTest {
         mvc.perform(get("/products").param("orderBy", orderBy).param("sort", sort))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(dao);
+    }
+
+    @Test
+    void returnsTotalIndependentOfPageSize() throws Exception {
+        when(dao.getProducts(any())).thenReturn(List.of(new Product()));
+        when(dao.countProducts(any())).thenReturn(12);
+        mvc.perform(get("/products").param("category", "FOOD").param("search", " apple ")
+                        .param("limit", "1").param("offset", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.limit").value(1))
+                .andExpect(jsonPath("$.offset").value(5))
+                .andExpect(jsonPath("$.total").value(12))
+                .andExpect(jsonPath("$.productlist.length()").value(1));
+        verify(dao).countProducts(matchingParams(ProductCategory.FOOD, "apple"));
+    }
+
+    @Test
+    void preservesTotalPastLastPage() throws Exception {
+        when(dao.getProducts(any())).thenReturn(List.of());
+        when(dao.countProducts(any())).thenReturn(7);
+        mvc.perform(get("/products").param("offset", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.limit").value(5))
+                .andExpect(jsonPath("$.offset").value(10))
+                .andExpect(jsonPath("$.total").value(7))
+                .andExpect(jsonPath("$.productlist").isEmpty());
     }
 }

@@ -101,4 +101,22 @@ class ProductCategoryIntegrationTest {
             assertEquals(expected.stream().skip(offset).limit(2).toList(), actual);
         }
     }
+
+    @Test
+    void countUsesFiltersAndIgnoresPagination() {
+        for (ProductCategory category : ProductCategory.values()) {
+            for (String search : List.of("%", "Java", "蘋果", "no-match-7b9e12")) {
+                ProductQueryParams params = queryParams(category, search);
+                params.setLimit(1);
+                params.setOffset(Integer.MAX_VALUE);
+                Integer expected = jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM product WHERE category = ? AND product_name LIKE ?",
+                        Integer.class, category.name(), "%" + search + "%");
+                assertEquals(expected, dao.countProducts(params));
+                assertTrue(dao.getProducts(params).isEmpty());
+            }
+        }
+        assertEquals(jdbc.queryForObject("SELECT COUNT(*) FROM product", Integer.class),
+                dao.countProducts(queryParams(null, null)));
+    }
 }
