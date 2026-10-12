@@ -1,9 +1,9 @@
 package com.example.demo.service;
 
 import com.example.demo.model.Product;
-import com.example.demo.constant.ProductCategory;
 import java.util.List;
 import com.example.demo.dto.ProductRequest;
+import com.example.demo.dto.ProductQueryParams;
 
 public interface ProductService {
     Product getProductById(Integer productId);
@@ -14,5 +14,5 @@ public interface ProductService {
 
     void deleteProduct(Integer productId);
 
-    List<Product> getProducts(ProductCategory category, String search);
+    List<Product> getProducts(ProductQueryParams productQueryParams);
 }

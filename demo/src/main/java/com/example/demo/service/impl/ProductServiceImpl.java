@@ -2,10 +2,10 @@ package com.example.demo.service.impl;
 
 import com.example.demo.dao.ProductDao;
 import com.example.demo.dto.ProductRequest;
+import com.example.demo.dto.ProductQueryParams;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.demo.model.Product;
-import com.example.demo.constant.ProductCategory;
 import java.util.List;
 import com.example.demo.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,13 +71,15 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<Product> getProducts(ProductCategory category, String search) {
+    public List<Product> getProducts(ProductQueryParams productQueryParams) {
+        String search = productQueryParams.getSearch();
         if (search != null) {
             search = search.strip();
             if (search.isEmpty()) {
                 search = null;
             }
         }
-        return productDao.getProducts(category, search);
+        productQueryParams.setSearch(search);
+        return productDao.getProducts(productQueryParams);
     }
 }

@@ -11,6 +11,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
+import java.util.Objects;
+import com.example.demo.dto.ProductQueryParams;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,7 +42,7 @@ class GetProductsTest {
         second.setProductId(3);
         second.setProductName("Java book");
         second.setCategory(ProductCategory.E_BOOK);
-        when(dao.getProducts(null, null)).thenReturn(List.of(first, second));
+        when(dao.getProducts(matchingParams(null, null))).thenReturn(List.of(first, second));
 
         mvc.perform(get("/products"))
                 .andExpect(status().isOk())
@@ -48,16 +50,16 @@ class GetProductsTest {
                 .andExpect(jsonPath("$[0].productId").value(1))
                 .andExpect(jsonPath("$[0].category").value("FOOD"))
                 .andExpect(jsonPath("$[1].productName").value("Java book"));
-        verify(dao).getProducts(null, null);
+        verify(dao).getProducts(matchingParams(null, null));
     }
 
     @Test
     void returnsEmptyArrayWhenNoProductsExist() throws Exception {
-        when(dao.getProducts(null, null)).thenReturn(List.of());
+        when(dao.getProducts(matchingParams(null, null))).thenReturn(List.of());
         mvc.perform(get("/products"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
-        verify(dao).getProducts(null, null);
+        verify(dao).getProducts(matchingParams(null, null));
     }
 
     @org.junit.jupiter.params.ParameterizedTest
@@ -66,18 +68,18 @@ class GetProductsTest {
         Product product = new Product();
         product.setProductId(1);
         product.setCategory(category);
-        when(dao.getProducts(category, null)).thenReturn(List.of(product));
+        when(dao.getProducts(matchingParams(category, null))).thenReturn(List.of(product));
 
         mvc.perform(get("/products").param("category", category.name()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].category").value(category.name()));
-        verify(dao).getProducts(category, null);
+        verify(dao).getProducts(matchingParams(category, null));
     }
 
     @Test
     void returnsEmptyArrayWhenCategoryHasNoProducts() throws Exception {
-        when(dao.getProducts(ProductCategory.CAR, null)).thenReturn(List.of());
+        when(dao.getProducts(matchingParams(ProductCategory.CAR, null))).thenReturn(List.of());
         mvc.perform(get("/products").param("category", "CAR"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
@@ -94,27 +96,33 @@ class GetProductsTest {
     void searchesNameAndTrimsWhitespace() throws Exception {
         Product product = new Product();
         product.setProductName("Java book");
-        when(dao.getProducts(null, "Java")).thenReturn(List.of(product));
+        when(dao.getProducts(matchingParams(null, "Java"))).thenReturn(List.of(product));
         mvc.perform(get("/products").param("search", "  Java  "))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].productName").value("Java book"));
-        verify(dao).getProducts(null, "Java");
+        verify(dao).getProducts(matchingParams(null, "Java"));
     }
 
     @Test
     void combinesCategoryAndSearch() throws Exception {
-        when(dao.getProducts(ProductCategory.FOOD, "apple")).thenReturn(List.of());
+        when(dao.getProducts(matchingParams(ProductCategory.FOOD, "apple"))).thenReturn(List.of());
         mvc.perform(get("/products").param("category", "FOOD").param("search", "apple"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
-        verify(dao).getProducts(ProductCategory.FOOD, "apple");
+        verify(dao).getProducts(matchingParams(ProductCategory.FOOD, "apple"));
     }
 
     @Test
     void ignoresBlankSearchButKeepsCategory() throws Exception {
-        when(dao.getProducts(ProductCategory.CAR, null)).thenReturn(List.of());
+        when(dao.getProducts(matchingParams(ProductCategory.CAR, null))).thenReturn(List.of());
         mvc.perform(get("/products").param("category", "CAR").param("search", "   "))
                 .andExpect(status().isOk());
-        verify(dao).getProducts(ProductCategory.CAR, null);
+        verify(dao).getProducts(matchingParams(ProductCategory.CAR, null));
+    }
+
+    private ProductQueryParams matchingParams(ProductCategory category, String search) {
+        return argThat(params -> params != null
+                && params.getCategory() == category
+                && Objects.equals(params.getSearch(), search));
     }
 }
