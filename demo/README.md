@@ -147,3 +147,15 @@ email 與 password 使用 `@NotBlank` 驗證，null、空字串或純空白回�
 註冊前會依 email 查詢使用者。已存在時記錄 `WARN 註冊失敗：Email <email> 已被註冊`，並回傳 400，不執行新增。並行請求在檢查後才發生的重複新增仍由資料庫唯一限制阻止，本次未新增該例外的 HTTP 轉換。
 
 註冊 email 同時使用 `@NotBlank` 與 `@Email`，格式不合法時回傳 400；此驗證不會確認信箱是否存在或能收信。
+
+## 基本使用者登入
+
+`POST /users/login`，使用 `Content-Type: application/json`：
+
+```json
+{"email":"test@example.com","password":"test-password"}
+```
+
+Email 與密碼必填，Email 須符合 `@Email` 格式，輸入不合法回傳 400。帳密正確回傳 200 與 User（不包含 password）；Email 不存在或密碼錯誤回傳 401，後端 WARN 記錄 Email 與失敗原因，不記錄密碼。
+
+目前沿用資料庫中的原始密碼進行字串比較，僅核對帳密，不建立 Session 或 JWT，也不會讓其他 API 自動具有登入保護。

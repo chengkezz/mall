@@ -2,6 +2,7 @@ package com.example.demo.service.impl;
 
 import com.example.demo.dao.UserDao;
 import com.example.demo.dto.UserRegisterRequest;
+import com.example.demo.dto.UserLoginRequest;
 import com.example.demo.model.User;
 import com.example.demo.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,5 +35,19 @@ public class UserServiceImpl implements UserService {
     public User getUserById(Integer userId) {
 
         return userDao.getUserById(userId);
+    }
+
+    @Override
+    public User login(UserLoginRequest userLoginRequest) {
+        User user = userDao.getUserByEmail(userLoginRequest.getEmail());
+        if (user == null) {
+            log.warn("登入失敗：Email {} 尚未註冊", userLoginRequest.getEmail());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+        if (!user.getPassword().equals(userLoginRequest.getPassword())) {
+            log.warn("登入失敗：Email {} 的密碼錯誤", userLoginRequest.getEmail());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+        return user;
     }
 }
