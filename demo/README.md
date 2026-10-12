@@ -129,3 +129,17 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 ```json
 {"limit": 5, "offset": 10, "total": 7, "productlist": []}
 ```
+
+## 基本使用者註冊
+
+`POST /users/register`，使用 `Content-Type: application/json`：
+
+```json
+{"email":"test@example.com","password":"test-password"}
+```
+
+email 與 password 使用 `@NotBlank` 驗證，null、空字串或純空白回傳 400。成功回傳 201 與 User 的 ID、email、建立及修改時間，password 使用 `@JsonIgnore` 排除。
+
+目前僅實作基本流程：密碼原值儲存，尚未加入雜湊、Email 格式驗證、重複 Email 檢查或衝突例外轉換。資料庫 email 唯一限制仍生效。
+
+`MALL_DB_TEST=true ./mvnw -Dtest=UserRegistrationIntegrationTest test` 可執行 MySQL 註冊整合測試；測試使用隨機 email 並交易回滾，自增 ID 可能跳號。

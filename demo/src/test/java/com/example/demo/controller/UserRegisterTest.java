@@ -1,0 +1,69 @@
+package com.example.demo.controller;
+
+import com.example.demo.dao.UserDao;
+import com.example.demo.model.User;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+class UserRegisterTest {
+    @Autowired
+    private WebApplicationContext context;
+    @MockitoBean
+    private UserDao dao;
+    private MockMvc mvc;
+
+    @BeforeEach
+    void setUp() {
+        mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    }
+
+    @Test
+    void registersAndReadsUserWithoutReturningPassword() throws Exception {
+        User user = new User();
+        user.setUserId(42);
+        user.setEmail("test@example.com");
+        user.setPassword("test-password");
+        when(dao.createUser(any())).thenReturn(42);
+        when(dao.getUserById(42)).thenReturn(user);
+        mvc.perform(post("/users/register").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"test@example.com\",\"password\":\"test-password\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userId").value(42))
+                .andExpect(jsonPath("$.email").value("test@example.com"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+        var order = inOrder(dao);
+        order.verify(dao).createUser(argThat(r -> "test@example.com".equals(r.getEmail())
+                && "test-password".equals(r.getPassword())));
+        order.verify(dao).getUserById(42);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "{}", "{\"password\":\"test\"}", "{\"email\":\"test@example.com\"}",
+        "{\"email\":null,\"password\":\"test\"}",
+        "{\"email\":\"\",\"password\":\"test\"}",
+        "{\"email\":\"   \",\"password\":\"test\"}",
+        "{\"email\":\"test@example.com\",\"password\":null}",
+        "{\"email\":\"test@example.com\",\"password\":\"\"}",
+        "{\"email\":\"test@example.com\",\"password\":\"   \"}"
+    })
+    void rejectsBlankFieldsBeforeDao(String body) throws Exception {
+        mvc.perform(post("/users/register").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(dao);
+    }
+}
