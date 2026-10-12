@@ -80,6 +80,14 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         productQueryParams.setSearch(search);
+        String orderBy = productQueryParams.getOrderBy();
+        if (!"created_date".equals(orderBy) && !"price".equals(orderBy)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid orderBy");
+        }
+        String sort = productQueryParams.getSort();
+        if (!"asc".equals(sort) && !"desc".equals(sort)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid sort");
+        }
         return productDao.getProducts(productQueryParams);
     }
 }

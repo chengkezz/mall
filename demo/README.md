@@ -90,7 +90,7 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 
 `GET http://localhost:8080/products`，不需要 Request Body。
 
-回傳 `200` 與全部商品的 JSON 陣列，沒有商品時回傳 `[]`。可透過選填的 `category` 參數篩選分類，目前不提供排序或分頁，回傳順序不保證固定。
+回傳 `200` 與全部商品的 JSON 陣列，沒有商品時回傳 `[]`。可透過選填的 `category` 參數篩選分類，目前不提供分頁，預設依建立時間由新到舊排序，同值依商品 ID 由小到大排序。
 
 分類查詢範例：
 
@@ -105,3 +105,11 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 可搭配分類：`GET /products?category=E_BOOK&search=Java`，兩個條件必須同時符合。
 `search` 會去除前後空白，空字串或純空白視為沒有關鍵字條件。
 搜尋使用 `LIKE '%關鍵字%'`，輸入的 `%`、`_` 保留 SQL 萬用字元意義。找不到商品仍回傳 `200` 與 `[]`。
+
+## 商品列表排序
+
+- `GET /products?orderBy=price&sort=asc`：價格由低到高。
+- `GET /products?orderBy=price&sort=desc`：價格由高到低。
+- `GET /products?category=FOOD&search=蘋果&orderBy=created_date&sort=asc`：符合條件的商品依建立時間由舊到新。
+
+`orderBy` 只允許 `created_date`、`price`，預設 `created_date`；`sort` 只允許小寫 `asc`、`desc`，預設 `desc`。不合法值回傳 `400`。主要排序值相同時，依 `product_id ASC` 排序。

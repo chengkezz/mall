@@ -125,4 +125,30 @@ class GetProductsTest {
                 && params.getCategory() == category
                 && Objects.equals(params.getSearch(), search));
     }
+
+    @Test
+    void usesDefaultSort() throws Exception {
+        mvc.perform(get("/products")).andExpect(status().isOk());
+        verify(dao).getProducts(argThat(p -> "created_date".equals(p.getOrderBy())
+                && "desc".equals(p.getSort())));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"price,asc", "price,desc", "created_date,asc", "created_date,desc"})
+    void passesValidatedSortingWithFilters(String orderBy, String sort) throws Exception {
+        mvc.perform(get("/products").param("orderBy", orderBy).param("sort", sort)
+                        .param("category", "FOOD").param("search", " apple "))
+                .andExpect(status().isOk());
+        verify(dao).getProducts(argThat(p -> orderBy.equals(p.getOrderBy())
+                && sort.equals(p.getSort()) && p.getCategory() == ProductCategory.FOOD
+                && "apple".equals(p.getSearch())));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"stock,asc", "price,ASC", "price,invalid", "price; DROP TABLE product,asc"})
+    void rejectsInvalidSortingBeforeDao(String orderBy, String sort) throws Exception {
+        mvc.perform(get("/products").param("orderBy", orderBy).param("sort", sort))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(dao);
+    }
 }

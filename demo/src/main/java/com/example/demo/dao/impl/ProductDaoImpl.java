@@ -130,6 +130,11 @@ public class ProductDaoImpl implements ProductDao {
             map.put("search", "%" + productQueryParams.getSearch() + "%");
         }
 
+        // 排序欄位與方向已由 Service 驗證允許值。
+        sql += " ORDER BY " + productQueryParams.getOrderBy()
+                + " " + productQueryParams.getSort();
+        sql += ", product_id ASC";
+
         List<Product> productList = namedParameterJdbcTemplate.query(
                 sql, map, new ProductRowMapper());
         return productList;

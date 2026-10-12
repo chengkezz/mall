@@ -61,4 +61,26 @@ class ProductCategoryIntegrationTest {
         params.setSearch(search);
         return params;
     }
+
+    @Test
+    void sortsBothFieldsInBothDirectionsWithIdTieBreaker() {
+        List<Product> all = dao.getProducts(new ProductQueryParams());
+        for (String field : List.of("price", "created_date")) {
+            for (String direction : List.of("asc", "desc")) {
+                ProductQueryParams params = new ProductQueryParams();
+                params.setOrderBy(field);
+                params.setSort(direction);
+                java.util.Comparator<Product> comparator = "price".equals(field)
+                        ? java.util.Comparator.comparing(Product::getPrice)
+                        : java.util.Comparator.comparing(Product::getCreatedDate);
+                if ("desc".equals(direction)) {
+                    comparator = comparator.reversed();
+                }
+                comparator = comparator.thenComparing(Product::getProductId);
+                var expected = all.stream().sorted(comparator).map(Product::getProductId).toList();
+                var actual = dao.getProducts(params).stream().map(Product::getProductId).toList();
+                assertEquals(expected, actual);
+            }
+        }
+    }
 }
