@@ -91,4 +91,13 @@ class UserRegisterTest {
             appender.stop();
         }
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"not-an-email", "@example.com", "test@", "test user@example.com"})
+    void rejectsInvalidEmailFormat(String email) throws Exception {
+        mvc.perform(post("/users/register").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"test-password\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(dao);
+    }
 }

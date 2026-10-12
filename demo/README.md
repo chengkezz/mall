@@ -140,8 +140,10 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 
 email 與 password 使用 `@NotBlank` 驗證，null、空字串或純空白回傳 400。成功回傳 201 與 User 的 ID、email、建立及修改時間，password 使用 `@JsonIgnore` 排除。
 
-目前僅實作基本流程：密碼原值儲存，尚未加入雜湊、Email 格式驗證或資料庫唯一限制衝突的例外轉換。資料庫 email 唯一限制仍生效。
+目前僅實作基本流程：密碼原值儲存，尚未加入雜湊或資料庫唯一限制衝突的例外轉換。資料庫 email 唯一限制仍生效。
 
 `MALL_DB_TEST=true ./mvnw -Dtest=UserRegistrationIntegrationTest test` 可執行 MySQL 註冊整合測試；測試使用隨機 email 並交易回滾，自增 ID 可能跳號。
 
 註冊前會依 email 查詢使用者。已存在時記錄 `WARN 註冊失敗：Email <email> 已被註冊`，並回傳 400，不執行新增。並行請求在檢查後才發生的重複新增仍由資料庫唯一限制阻止，本次未新增該例外的 HTTP 轉換。
+
+註冊 email 同時使用 `@NotBlank` 與 `@Email`，格式不合法時回傳 400；此驗證不會確認信箱是否存在或能收信。
