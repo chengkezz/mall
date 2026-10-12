@@ -57,6 +57,8 @@ class ProductCategoryIntegrationTest {
 
     private ProductQueryParams queryParams(ProductCategory category, String search) {
         ProductQueryParams params = new ProductQueryParams();
+        params.setLimit(Integer.MAX_VALUE);
+        params.setOffset(0);
         params.setCategory(category);
         params.setSearch(search);
         return params;
@@ -64,10 +66,10 @@ class ProductCategoryIntegrationTest {
 
     @Test
     void sortsBothFieldsInBothDirectionsWithIdTieBreaker() {
-        List<Product> all = dao.getProducts(new ProductQueryParams());
+        List<Product> all = dao.getProducts(queryParams(null, null));
         for (String field : List.of("price", "created_date")) {
             for (String direction : List.of("asc", "desc")) {
-                ProductQueryParams params = new ProductQueryParams();
+                ProductQueryParams params = queryParams(null, null);
                 params.setOrderBy(field);
                 params.setSort(direction);
                 java.util.Comparator<Product> comparator = "price".equals(field)
@@ -81,6 +83,22 @@ class ProductCategoryIntegrationTest {
                 var actual = dao.getProducts(params).stream().map(Product::getProductId).toList();
                 assertEquals(expected, actual);
             }
+        }
+    }
+
+    @Test
+    void paginatesSortedFilteredResultsAndReturnsEmptyPastEnd() {
+        ProductQueryParams params = queryParams(ProductCategory.FOOD, "%");
+        params.setOrderBy("price");
+        params.setSort("asc");
+        var expected = jdbc.queryForList(
+                "SELECT product_id FROM product WHERE category = ? AND product_name LIKE ? ORDER BY price ASC, product_id ASC",
+                Integer.class, "FOOD", "%%%");
+        params.setLimit(2);
+        for (int offset = 0; offset <= expected.size() + 2; offset += 2) {
+            params.setOffset(offset);
+            var actual = dao.getProducts(params).stream().map(Product::getProductId).toList();
+            assertEquals(expected.stream().skip(offset).limit(2).toList(), actual);
         }
     }
 }

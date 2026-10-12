@@ -1,6 +1,9 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.Product;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import org.springframework.validation.annotation.Validated;
 import com.example.demo.constant.ProductCategory;
 import java.util.List;
 import com.example.demo.dto.ProductRequest;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
+@Validated
 public class ProductController {
 
     @Autowired
@@ -70,12 +74,16 @@ public class ProductController {
             @RequestParam(name = "category", required = false) ProductCategory category,
             @RequestParam(name = "search", required = false) String search,
             @RequestParam(name = "orderBy", defaultValue = "created_date") String orderBy,
-            @RequestParam(name = "sort", defaultValue = "desc") String sort) {
+            @RequestParam(name = "sort", defaultValue = "desc") String sort,
+            @RequestParam(name = "limit", defaultValue = "5") @Min(1) @Max(100) Integer limit,
+            @RequestParam(name = "offset", defaultValue = "0") @Min(0) Integer offset) {
         ProductQueryParams productQueryParams = new ProductQueryParams();
         productQueryParams.setCategory(category);
         productQueryParams.setSearch(search);
         productQueryParams.setOrderBy(orderBy);
         productQueryParams.setSort(sort);
+        productQueryParams.setLimit(limit);
+        productQueryParams.setOffset(offset);
 
         List<Product> productList = productService.getProducts(productQueryParams);
         return ResponseEntity.status(HttpStatus.OK).body(productList);

@@ -90,11 +90,11 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 
 `GET http://localhost:8080/products`，不需要 Request Body。
 
-回傳 `200` 與全部商品的 JSON 陣列，沒有商品時回傳 `[]`。可透過選填的 `category` 參數篩選分類，目前不提供分頁，預設依建立時間由新到舊排序，同值依商品 ID 由小到大排序。
+回傳 `200` 與本頁商品的 JSON 陣列，沒有商品時回傳 `[]`。可透過選填的 `category` 參數篩選分類，預設每頁最多 5 筆，預設依建立時間由新到舊排序，同值依商品 ID 由小到大排序。
 
 分類查詢範例：
 
-- `GET /products`：全部商品。
+- `GET /products`：不限制分類，取得前 5 筆商品。
 - `GET /products?category=FOOD`：食品。
 - `GET /products?category=CAR`：汽車。
 - `GET /products?category=E_BOOK`：電子書。
@@ -113,3 +113,11 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 - `GET /products?category=FOOD&search=蘋果&orderBy=created_date&sort=asc`：符合條件的商品依建立時間由舊到新。
 
 `orderBy` 只允許 `created_date`、`price`，預設 `created_date`；`sort` 只允許小寫 `asc`、`desc`，預設 `desc`。不合法值回傳 `400`。主要排序值相同時，依 `product_id ASC` 排序。
+
+## 商品列表分頁
+
+- `GET /products?limit=5&offset=0`：第一頁。
+- `GET /products?limit=5&offset=5`：第二頁。
+- `GET /products?category=FOOD&search=蘋果&orderBy=price&sort=asc&limit=5&offset=0`：篩選、排序後分頁。
+
+`limit` 預設 5，範圍 1～100；`offset` 預設 0，必須大於等於 0。預設值只在 Controller 設定，DTO 不設定初始值。使用 `@Validated`、`@Min`、`@Max` 驗證，驗證失敗回傳 `400`。超過最後一頁回傳 `200` 與 `[]`，回應維持商品陣列，不包含總筆數。
