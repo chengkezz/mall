@@ -24,6 +24,7 @@ class UserRegistrationIntegrationTest {
         UserRegisterRequest request = new UserRegisterRequest();
         request.setEmail("test-" + UUID.randomUUID() + "@example.com");
         request.setPassword("test-only-password");
+        assertNull(dao.getUserByEmail(request.getEmail()));
         Integer id = service.register(request);
         var user = service.getUserById(id);
         assertNotNull(id);
@@ -35,5 +36,10 @@ class UserRegistrationIntegrationTest {
         assertNotNull(user.getCreatedDate());
         assertEquals(user.getCreatedDate(), user.getLastModifiedDate());
         assertNull(dao.getUserById(-1));
+        assertEquals(id, dao.getUserByEmail(request.getEmail()).getUserId());
+        var exception = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> service.register(request));
+        assertEquals(org.springframework.http.HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertEquals(id, dao.getUserByEmail(request.getEmail()).getUserId());
     }
 }
