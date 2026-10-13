@@ -177,3 +177,19 @@ Email 與密碼必填，Email 須符合 `@Email` 格式，輸入不合法回傳 
 需先建立 `order` 與 `order_item` 資料表。執行
 `MALL_DB_TEST=true ./mvnw -Dtest=OrderIntegrationTest test` 可驗證實際資料與庫存回滾。
 測試僅操作自行建立的資料：成功情境交易回滾，失敗情境使用 finally 清除測試資料；自增 ID 可能跳號。
+
+
+## 查詢使用者訂單
+
+`GET /users/{userId}/orders`，不需要 Request Body。
+
+成功回傳 `200` 與訂單陣列，每張訂單包含 `orderId`、`userId`、`totalAmount`、
+`createdDate`、`lastModifiedDate` 和 `orderItemList`。明細包含
+`orderItemId`、`orderId`、`productId`、`quantity`、`amount`。
+
+訂單依 `created_date DESC, order_id DESC` 排序，明細依 `order_item_id ASC` 排序。
+使用者沒有訂單時回傳 `200` 與 `[]`；使用者不存在回傳 `404`；ID 不是整數回傳 `400`。
+目前未分頁，依訂單逐筆查詢明細，也尚未驗證登入身分。
+
+`MALL_DB_TEST=true ./mvnw -Dtest=OrderQueryIntegrationTest test` 可驗證指定使用者的
+訂單篩選、排序與明細對應。測試資料交易回滾，自增 ID 可能跳號。

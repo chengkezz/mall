@@ -1,4 +1,7 @@
 package com.example.demo.dao.impl;
+import com.example.demo.model.Order;
+import com.example.demo.rowmapper.OrderRowMapper;
+import com.example.demo.rowmapper.OrderItemRowMapper;
 
 import com.example.demo.dao.OrderDao;
 import com.example.demo.model.OrderItem;
@@ -45,5 +48,31 @@ public class OrderDaoImpl implements OrderDao {
             map.put("amount", item.getAmount());
             namedParameterJdbcTemplate.update(sql, map);
         }
+    }
+
+    @Override
+    public List<Order> getOrders(Integer userId) {
+        String sql = """
+                SELECT order_id, user_id, total_amount, created_date, last_modified_date
+                FROM `order`
+                WHERE user_id = :userId
+                ORDER BY created_date DESC, order_id DESC
+                """;
+        Map<String, Object> map = new HashMap<>();
+        map.put("userId", userId);
+        return namedParameterJdbcTemplate.query(sql, map, new OrderRowMapper());
+    }
+
+    @Override
+    public List<OrderItem> getOrderItemsByOrderId(Integer orderId) {
+        String sql = """
+                SELECT order_item_id, order_id, product_id, quantity, amount
+                FROM order_item
+                WHERE order_id = :orderId
+                ORDER BY order_item_id ASC
+                """;
+        Map<String, Object> map = new HashMap<>();
+        map.put("orderId", orderId);
+        return namedParameterJdbcTemplate.query(sql, map, new OrderItemRowMapper());
     }
 }

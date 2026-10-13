@@ -5,7 +5,8 @@ import com.example.demo.dto.*;
 import com.example.demo.model.*;
 import com.example.demo.controller.OrderController;
 import com.example.demo.service.impl.OrderServiceImpl;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -17,6 +18,7 @@ import java.util.List;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class OrderServiceTest {
@@ -109,5 +111,45 @@ class OrderServiceTest {
         assertEquals(400, assertThrows(ResponseStatusException.class,
                 () -> service.createOrder(1, request)).getStatusCode().value());
         verifyNoInteractions(orders);
+    }
+
+    @Test
+    void returnsOrderListWithDetails() throws Exception {
+        Order order = new Order();
+        order.setOrderId(42); order.setUserId(1); order.setTotalAmount(40);
+        OrderItem item = new OrderItem();
+        item.setOrderItemId(8); item.setOrderId(42); item.setProductId(4);
+        item.setQuantity(2); item.setAmount(40);
+        when(orders.getOrders(1)).thenReturn(List.of(order));
+        when(orders.getOrderItemsByOrderId(42)).thenReturn(List.of(item));
+        mvc.perform(get("/users/1/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].orderId").value(42))
+                .andExpect(jsonPath("$[0].userId").value(1))
+                .andExpect(jsonPath("$[0].totalAmount").value(40))
+                .andExpect(jsonPath("$[0].orderItemList[0].productId").value(4))
+                .andExpect(jsonPath("$[0].orderItemList[0].quantity").value(2))
+                .andExpect(jsonPath("$[0].orderItemList[0].amount").value(40));
+    }
+
+    @Test
+    void returnsEmptyListForUserWithoutOrders() throws Exception {
+        when(orders.getOrders(1)).thenReturn(List.of());
+        mvc.perform(get("/users/1/orders"))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+        verify(orders, never()).getOrderItemsByOrderId(anyInt());
+    }
+
+    @Test
+    void queryRejectsMissingUser() throws Exception {
+        mvc.perform(get("/users/2/orders")).andExpect(status().isNotFound());
+        verifyNoInteractions(orders);
+    }
+
+    @Test
+    void queryRejectsNonIntegerUserId() throws Exception {
+        mvc.perform(get("/users/abc/orders")).andExpect(status().isBadRequest());
+        verifyNoInteractions(users, orders);
     }
 }

@@ -1,4 +1,6 @@
 package com.example.demo.controller;
+import com.example.demo.model.Order;
+import java.util.List;
 
 import com.example.demo.dto.CreateOrderRequest;
 import com.example.demo.service.OrderService;
@@ -20,5 +22,11 @@ public class OrderController {
             @RequestBody @Valid CreateOrderRequest request) {
         Integer orderId = orderService.createOrder(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("orderId", orderId));
+    }
+
+    @GetMapping("/users/{userId}/orders")
+    public ResponseEntity<List<Order>> getOrders(@PathVariable Integer userId) {
+        List<Order> orderList = orderService.getOrders(userId);
+        return ResponseEntity.status(HttpStatus.OK).body(orderList);
     }
 }

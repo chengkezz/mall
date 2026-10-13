@@ -59,4 +59,17 @@ public class OrderServiceImpl implements OrderService {
                     "Quantity or amount exceeds integer limit", exception);
         }
     }
+
+    @Override
+    public List<Order> getOrders(Integer userId) {
+        if (userDao.getUserById(userId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        List<Order> orderList = orderDao.getOrders(userId);
+        for (Order order : orderList) {
+            List<OrderItem> items = orderDao.getOrderItemsByOrderId(order.getOrderId());
+            order.setOrderItemList(items);
+        }
+        return orderList;
+    }
 }
