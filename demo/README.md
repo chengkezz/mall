@@ -1,195 +1,320 @@
-# Mall API
+# Mall｜電商後端 REST API
 
-使用 Java 17 以上版本、Spring Boot 與 MySQL。
+以 **Java、Spring Boot、Spring JDBC 與 MySQL** 實作的電商後端練習專案，涵蓋商品管理、會員註冊與登入、訂單建立及查詢。採用 Controller → Service → DAO 分層，透過手寫 SQL 練習資料存取、條件查詢與交易控制。
 
-## 本機設定
+本專案提供 JSON API，可使用 curl 或 Postman 操作，尚未包含前端購物介面。
 
-1. 將 `src/main/resources/application.properties.example` 複製為同目錄的 `application.properties`。
-2. 填入本機 MySQL 資料庫名稱、帳號與密碼。`application.properties` 已被 Git 忽略，請勿提交真實密碼。
-3. 執行 `./mvnw test` 驗證專案。
-4. 執行 `DemoApplication`，或使用 `./mvnw spring-boot:run` 啟動。
+## 功能概覽
 
-## 查詢單一商品
-
-`GET http://localhost:8080/products/{productId}`
-
-- 商品存在：回傳 `200` 與商品 JSON。
-- 商品不存在：回傳 `404`，無回應內容。
-- ID 不是整數：回傳 `400`。
-
-採用 Controller → Service → DAO 分層，透過 JDBC 查詢，使用 `@Autowired` 欄位注入。
-
-此功能使用既有的 `product` 資料表，不會自動建表。資料表需包含：
-
-| 欄位 | 型別 |
+| 模組 | 已實作功能 |
 | --- | --- |
-| product_id | INT PRIMARY KEY AUTO_INCREMENT |
-| product_name | VARCHAR(128) NOT NULL |
-| category | VARCHAR(32) NOT NULL |
-| image_url | VARCHAR(256) NOT NULL |
-| price | INT NOT NULL |
-| stock | INT NOT NULL |
-| description | VARCHAR(1024)，允許 NULL |
-| created_date | TIMESTAMP NOT NULL |
-| last_modified_date | TIMESTAMP NOT NULL |
+| 商品 | 新增、查詢、修改、刪除商品 |
+| 商品列表 | 分類篩選、名稱關鍵字搜尋、價格／建立時間排序、分頁與總筆數 |
+| 會員 | Email 註冊、重複帳號檢查、帳密驗證、回應隱藏密碼 |
+| 訂單 | 建立訂單、合併重複商品、計算金額、扣減庫存、查詢使用者訂單與明細 |
+| 驗證與測試 | 輸入驗證、MockMvc／Mockito 測試、可選擇執行的 MySQL 整合測試 |
 
-Controller 測試使用模擬的 Service；實際資料庫查詢需另外啟動 API 驗證。
+## 技術與架構
 
-## 日期回傳格式
+| 技術 | 用途 |
+| --- | --- |
+| Java 17+ | 程式語言，`pom.xml` 設定目標版本為 17 |
+| Spring Boot 4.1.1 / Spring MVC | 應用程式啟動與 REST API |
+| Spring JDBC | 透過 `NamedParameterJdbcTemplate` 執行 SQL |
+| MySQL | 儲存商品、使用者、訂單與明細 |
+| Jakarta Validation | 驗證會員輸入、訂單內容與分頁參數 |
+| Maven Wrapper | 建置、測試與啟動 |
+| JUnit / Mockito / MockMvc | 單元測試與 HTTP 行為驗證 |
 
-商品的 `createdDate` 與 `lastModifiedDate` 以 GMT+8、`yyyy-MM-dd HH:mm:ss` 格式回傳，例如 `2022-03-01 02:41:28`。此設定只影響 JSON 日期呈現，不修改資料庫資料。
+```text
+HTTP Request
+    ↓
+Controller  接收參數、回傳 HTTP 狀態與 JSON
+    ↓
+Service     處理驗證、商業邏輯與交易
+    ↓
+DAO         使用具名參數執行 SQL
+    ↓
+MySQL       儲存資料，透過 RowMapper 轉成 Java 物件
+```
 
-若已有本機 `application.properties`，請同步加入範本中的 `spring.jackson.date-format` 與 `spring.jackson.time-zone` 設定，並重新啟動程式。
+```text
+src/
+├── main/
+│   ├── java/com/example/demo/
+│   │   ├── controller/    # 商品、會員、訂單 API
+│   │   ├── service/       # 商業邏輯與實作
+│   │   ├── dao/           # 資料存取介面與 JDBC 實作
+│   │   ├── dto/           # 請求、查詢條件與分頁物件
+│   │   ├── model/         # 商品、會員、訂單與明細
+│   │   ├── rowmapper/     # SQL 查詢結果映射
+│   │   ├── constant/      # 商品分類
+│   │   └── exception/     # 驗證例外處理
+│   └── resources/
+│       └── application.properties.example
+└── test/java/com/example/demo/
+    ├── controller/
+    ├── service/
+    ├── dao/
+    └── rowmapper/
+```
 
-## 新增商品
+### 訂單交易設計
 
-`POST http://localhost:8080/products`，Header 使用 `Content-Type: application/json`。
+建立訂單時，後端先確認使用者存在，再合併相同商品的購買數量，依商品 ID 順序處理庫存，並以資料庫中的價格計算金額。
+
+- 使用 `@Transactional` 將扣庫存、建立訂單與寫入明細包在同一交易中，任一步驟失敗會回滾。
+- 扣庫存 SQL 同時檢查 `stock >= quantity`，以更新筆數判斷商品是否可購買，避免單純先讀庫存再覆寫造成超扣。
+- 使用 `Math.addExact` 與 `Math.multiplyExact` 檢查數量、單項金額及總金額的整數溢位。
+- 訂單金額由後端計算，客戶端僅傳商品 ID 與數量。
+
+## 本機啟動
+
+### 1. 下載專案
+
+準備 JDK 17 以上版本及可連線的 MySQL，再執行：
+
+```bash
+git clone https://github.com/chengkezz/mall.git
+cd mall/demo
+```
+
+以下指令皆在 `demo` 目錄執行。Windows 可將 `./mvnw` 替換為 `mvnw.cmd`。
+
+### 2. 建立資料庫與資料表
+
+專案目前不會自動建表，也未提供資料庫 migration。以下為依現有 DAO 欄位整理的**本機建表範例**，請在新的 MySQL 練習資料庫執行；既有資料庫請先確認結構，不要直接覆蓋。
+
+```sql
+CREATE DATABASE mall CHARACTER SET utf8mb4;
+USE mall;
+
+CREATE TABLE product (
+    product_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_name VARCHAR(128) NOT NULL,
+    category VARCHAR(32) NOT NULL,
+    image_url VARCHAR(256) NOT NULL,
+    price INT NOT NULL,
+    stock INT NOT NULL,
+    description VARCHAR(1024),
+    created_date TIMESTAMP NOT NULL,
+    last_modified_date TIMESTAMP NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `user` (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(256) NOT NULL UNIQUE,
+    password VARCHAR(256) NOT NULL,
+    created_date TIMESTAMP NOT NULL,
+    last_modified_date TIMESTAMP NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `order` (
+    order_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    total_amount INT NOT NULL,
+    created_date TIMESTAMP NOT NULL,
+    last_modified_date TIMESTAMP NOT NULL,
+    INDEX idx_order_user (user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE order_item (
+    order_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    amount INT NOT NULL,
+    INDEX idx_order_item_order (order_id)
+) ENGINE=InnoDB;
+```
+
+資料關聯為：使用者對應多張訂單、訂單對應多筆明細、每筆明細記錄商品 ID。上述範例未加外鍵；訂單明細會保留建立當時的數量與金額。
+
+### 3. 設定 MySQL 連線
+
+首次設定時，複製設定範本；若檔案已存在，直接編輯即可：
+
+```bash
+cp src/main/resources/application.properties.example src/main/resources/application.properties
+```
+
+將 `YOUR_MYSQL_USERNAME`、`YOUR_MYSQL_PASSWORD` 替換為本機帳密；若資料庫名稱、主機或連接埠不同，也需調整 URL。
+
+```properties
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=jdbc:mysql://localhost:3306/mall?serverTimezone=Asia/Taipei&characterEncoding=utf-8
+spring.datasource.username=YOUR_MYSQL_USERNAME
+spring.datasource.password=YOUR_MYSQL_PASSWORD
+
+spring.jackson.date-format=yyyy-MM-dd HH:mm:ss
+spring.jackson.time-zone=GMT+8
+```
+
+`application.properties` 已被 Git 忽略，請勿提交真實帳密。日期 JSON 使用 GMT+8 的 `yyyy-MM-dd HH:mm:ss` 格式。
+
+### 4. 啟動服務
+
+```bash
+./mvnw spring-boot:run
+```
+
+也可在 IntelliJ IDEA 開啟 `pom.xml`，等待 Maven 匯入完成後執行 `DemoApplication`。預設 API 位址為 `http://localhost:8080`。
+
+## API 一覽
+
+POST 與 PUT 的 JSON 請求須帶上 `Content-Type: application/json`。
+
+| 方法 | 路徑 | 說明 | 成功狀態 |
+| --- | --- | --- | --- |
+| GET | `/products` | 篩選、排序及分頁查詢商品 | 200 |
+| GET | `/products/{productId}` | 查詢單一商品 | 200 |
+| POST | `/products` | 新增商品 | 201 |
+| PUT | `/products/{productId}` | 修改商品 | 200 |
+| DELETE | `/products/{productId}` | 刪除商品 | 204 |
+| POST | `/users/register` | 註冊會員 | 201 |
+| POST | `/users/login` | 核對登入帳密 | 200 |
+| POST | `/users/{userId}/orders` | 建立訂單 | 201 |
+| GET | `/users/{userId}/orders` | 查詢使用者訂單及明細 | 200 |
+
+### 商品列表參數
+
+| 參數 | 預設值 | 規則 |
+| --- | --- | --- |
+| `category` | 不限 | `FOOD`、`CAR`、`E_BOOK`，區分大小寫 |
+| `search` | 不限 | 搜尋商品名稱，去除前後空白；空白視為未指定 |
+| `orderBy` | `created_date` | 僅允許 `created_date`、`price` |
+| `sort` | `desc` | 僅允許小寫 `asc`、`desc` |
+| `limit` | `5` | 1～100 |
+| `offset` | `0` | 大於等於 0，代表略過的筆數 |
+
+```bash
+curl 'http://localhost:8080/products?category=E_BOOK&search=Java&orderBy=price&sort=asc&limit=5&offset=0'
+```
+
+分類與關鍵字條件會同時套用；主要排序值相同時，以 `product_id ASC` 排序。搜尋使用 SQL `LIKE`，`%`、`_` 仍具有萬用字元意義。
+
+回應為分頁物件，`productlist` 的大小寫依目前 API 命名。`total` 不受分頁影響，例如符合條件共 7 筆，但略過 10 筆時：
 
 ```json
 {
-  "productName": "蘋果",
-  "category": "FOOD",
-  "imageUrl": "https://example.com/apple.jpg",
-  "price": 20,
-  "stock": 10,
-  "description": "這是來自澳洲的蘋果！"
+  "limit": 5,
+  "offset": 10,
+  "total": 7,
+  "productlist": []
 }
 ```
 
-- 成功回傳 `201` 與完整商品 JSON，包含資料庫產生的 `productId` 和後端設定的時間。
-- `productName`、`imageUrl` 不可空白，分別最多 128、256 字元。
-- `category` 必填，使用 `FOOD`、`CAR` 或 `E_BOOK`。
-- `price`、`stock` 必填，使用非負整數。
-- `description` 可省略或為 null，最多 1024 字元。
-- 缺少必填欄位、不合法分類、負數或超過長度限制時回傳 `400`。
+### 商品新增與修改規則
 
-執行 `MALL_DB_TEST=true ./mvnw test` 可額外驗證本機 MySQL 的新增與讀回。整合測試會回滾資料，但 MySQL 自增編號仍可能跳號；一般 `./mvnw test` 會跳過這項資料庫寫入測試。
+- `productName`、`imageUrl` 不可空白，長度上限分別為 128、256 字元。
+- `category` 必填，限上述三種分類。
+- `price`、`stock` 必填，須為非負整數。
+- `description` 可省略或為 `null`，最多 1024 字元。
+- PUT 須提供全部必填欄位；省略 `description` 或傳入 `null` 會清空描述。
+- 修改保留建立時間，更新最後修改時間。MySQL 連線請保留預設匹配筆數行為，勿設定 `useAffectedRows=true`，避免相同內容更新被誤判為不存在。
+- 刪除成功回傳 `204` 且無內容，商品不存在或重複刪除也相同；資料庫錯誤不會視為成功。
 
-## 修改商品
+## 操作範例：註冊 → 新增商品 → 下單 → 查詢
 
-`PUT http://localhost:8080/products/{productId}`，Header 使用 `Content-Type: application/json`。
+### 1. 註冊與登入
 
-Body 與新增商品相同，需提供全部必填欄位。省略 `description` 或傳入 null 會清空描述。
+```bash
+curl -X POST 'http://localhost:8080/users/register' \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"demo@example.com","password":"demo-password"}'
 
-- 成功回傳 `200` 與更新後完整商品 JSON。
-- 商品不存在回傳 `404`；存在商品的輸入未通過驗證回傳 `400`。
-- 保留商品 ID 與建立時間，更新最後修改時間（資料庫精度為秒）。
-- 同內容重複修改仍應成功；目前 MySQL 連線採預設的匹配筆數回報方式，請勿改成 `useAffectedRows=true`，避免將未變動資料誤判為不存在。
-
-`MALL_DB_TEST=true ./mvnw test` 也會驗證修改欄位、清空描述、建立時間保留、其他商品不受影響與重複修改。測試操作會回滾。
-
-## 刪除商品
-
-`DELETE http://localhost:8080/products/{productId}`，不需要 Request Body。
-
-直接刪除指定商品。無論商品存在、不存在或重複刪除，SQL 成功執行後都回傳 `204 No Content`，沒有回應內容。ID 不是整數時回傳 `400`；資料庫執行錯誤不會被當成刪除成功。
-
-`MALL_DB_TEST=true ./mvnw test` 會驗證刪除後查不到商品、其他商品仍存在，以及重複刪除回傳 204。只操作測試建立的商品，並在測試後回滾。
-
-## 查詢商品列表
-
-`GET http://localhost:8080/products`，不需要 Request Body。
-
-回傳 `200` 與 `Page<Product>` 分頁物件，包含 `limit`、`offset`、`total`、`productlist`。可透過選填的 `category` 參數篩選分類，預設每頁最多 5 筆，預設依建立時間由新到舊排序，同值依商品 ID 由小到大排序。
-
-分類查詢範例：
-
-- `GET /products`：不限制分類，取得前 5 筆商品。
-- `GET /products?category=FOOD`：食品。
-- `GET /products?category=CAR`：汽車。
-- `GET /products?category=E_BOOK`：電子書。
-
-分類名稱需符合 Enum 大小寫。非法分類回傳 `400`；分類沒有商品時回傳 `200`，`total` 為 0、`productlist` 為 `[]`。
-
-關鍵字查詢：`GET /products?search=Java`，搜尋商品名稱包含關鍵字的商品。
-可搭配分類：`GET /products?category=E_BOOK&search=Java`，兩個條件必須同時符合。
-`search` 會去除前後空白，空字串或純空白視為沒有關鍵字條件。
-搜尋使用 `LIKE '%關鍵字%'`，輸入的 `%`、`_` 保留 SQL 萬用字元意義。找不到商品仍回傳 `200`，`total` 為 0、`productlist` 為 `[]`。
-
-## 商品列表排序
-
-- `GET /products?orderBy=price&sort=asc`：價格由低到高。
-- `GET /products?orderBy=price&sort=desc`：價格由高到低。
-- `GET /products?category=FOOD&search=蘋果&orderBy=created_date&sort=asc`：符合條件的商品依建立時間由舊到新。
-
-`orderBy` 只允許 `created_date`、`price`，預設 `created_date`；`sort` 只允許小寫 `asc`、`desc`，預設 `desc`。不合法值回傳 `400`。主要排序值相同時，依 `product_id ASC` 排序。
-
-## 商品列表分頁
-
-- `GET /products?limit=5&offset=0`：第一頁。
-- `GET /products?limit=5&offset=5`：第二頁。
-- `GET /products?category=FOOD&search=蘋果&orderBy=price&sort=asc&limit=5&offset=0`：篩選、排序後分頁。
-
-`limit` 預設 5，範圍 1～100；`offset` 預設 0，必須大於等於 0。預設值只在 Controller 設定，DTO 不設定初始值。使用 `@Validated`、`@Min`、`@Max` 驗證，驗證失敗回傳 `400`。超過最後一頁回傳 `200`，`productlist` 為 `[]`，`total` 仍保留符合條件的總筆數。
-
-### 分頁回應
-
-`GET /products` 現在回傳物件，而非直接回傳陣列。`total` 是符合分類與關鍵字條件的總筆數，不受 `limit`、`offset` 影響；`productlist` 是目前這一頁的完整商品資料。
-
-```json
-{"limit": 5, "offset": 10, "total": 7, "productlist": []}
+curl -X POST 'http://localhost:8080/users/login' \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"demo@example.com","password":"demo-password"}'
 ```
 
-## 基本使用者註冊
+Email 與密碼不可空白，Email 須符合格式。註冊成功回傳 `201`，登入成功回傳 `200`，內容包含 `userId`、`email` 與建立／修改時間，不包含密碼。請記下回傳的 `userId`。
 
-`POST /users/register`，使用 `Content-Type: application/json`：
+### 2. 新增商品
 
-```json
-{"email":"test@example.com","password":"test-password"}
+```bash
+curl -X POST 'http://localhost:8080/products' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "productName": "Java 入門電子書",
+    "category": "E_BOOK",
+    "imageUrl": "https://example.com/java-book.jpg",
+    "price": 500,
+    "stock": 10,
+    "description": "Java 基礎學習教材"
+  }'
 ```
 
-email 與 password 使用 `@NotBlank` 驗證，null、空字串或純空白回傳 400。成功回傳 201 與 User 的 ID、email、建立及修改時間，password 使用 `@JsonIgnore` 排除。
+成功回傳 `201` 與完整商品資料，請記下 `productId`。`imageUrl` 是圖片網址欄位，目前沒有圖片上傳功能。
 
-註冊時在 Service 將密碼以 UTF-8 編碼轉成 MD5（32 位小寫十六進位）後儲存；回應不包含密碼。資料庫 email 唯一限制仍生效，尚未加入唯一限制衝突的例外轉換。MD5 僅供此練習使用，不適合正式系統的密碼儲存。
+### 3. 建立訂單
 
-`MALL_DB_TEST=true ./mvnw -Dtest=UserRegistrationIntegrationTest test` 可執行 MySQL 註冊整合測試；測試使用隨機 email 並交易回滾，自增 ID 可能跳號。
+將以下 `USER_ID` 與 `PRODUCT_ID` 換成前兩步實際回傳的整數 ID，再執行：
 
-註冊前會依 email 查詢使用者。已存在時記錄 `WARN 註冊失敗：Email <email> 已被註冊`，並回傳 400，不執行新增。並行請求在檢查後才發生的重複新增仍由資料庫唯一限制阻止，本次未新增該例外的 HTTP 轉換。
-
-註冊 email 同時使用 `@NotBlank` 與 `@Email`，格式不合法時回傳 400；此驗證不會確認信箱是否存在或能收信。
-
-## 基本使用者登入
-
-`POST /users/login`，使用 `Content-Type: application/json`：
-
-```json
-{"email":"test@example.com","password":"test-password"}
+```bash
+curl -X POST 'http://localhost:8080/users/USER_ID/orders' \
+  -H 'Content-Type: application/json' \
+  -d '{"buyItemList":[{"productId":PRODUCT_ID,"quantity":2}]}'
 ```
 
-Email 與密碼必填，Email 須符合 `@Email` 格式，輸入不合法回傳 400。帳密正確回傳 200 與 User（不包含 password）；Email 不存在或密碼錯誤回傳 401，後端 WARN 記錄 Email 與失敗原因，不記錄密碼。
-
-登入請傳原始密碼，Service 會以 UTF-8 編碼計算 MD5，再與資料庫中的雜湊比對。既有明文密碼未轉換，請用新註冊帳號測試。此功能僅核對帳密，不建立 Session 或 JWT，也不會讓其他 API 自動具有登入保護。
-
-
-## 建立訂單
-
-`POST /users/{userId}/orders`，使用 `Content-Type: application/json`：
+清單不可為空，商品 ID 與數量須為正整數。成功回傳 `201`，例如：
 
 ```json
-{"buyItemList":[{"productId":4,"quantity":2},{"productId":7,"quantity":1}]}
+{"orderId": 1}
 ```
 
-成功回傳 `201` 與 `{"orderId":1}`。商品 ID 與數量須為正整數，清單不可為空。
-後端依商品價格計算金額、合併重複商品並扣庫存；訂單、明細與扣庫存使用同一交易。
-使用者不存在回傳 `404`；商品不存在、庫存不足或數量／金額超過 INT 上限回傳 `400`，交易回滾。
-目前 URL 的 userId 僅指定下單使用者，尚未驗證登入身分。
+以上述商品價格購買 2 件時，後端計算訂單金額為 1000，並將庫存由 10 扣為 8。
 
-需先建立 `order` 與 `order_item` 資料表。執行
-`MALL_DB_TEST=true ./mvnw -Dtest=OrderIntegrationTest test` 可驗證實際資料與庫存回滾。
-測試僅操作自行建立的資料：成功情境交易回滾，失敗情境使用 finally 清除測試資料；自增 ID 可能跳號。
+### 4. 查詢訂單
 
+```bash
+curl 'http://localhost:8080/users/USER_ID/orders'
+```
 
-## 查詢使用者訂單
+回傳訂單陣列，每張訂單包含 `orderId`、`userId`、`totalAmount`、`createdDate`、`lastModifiedDate` 與 `orderItemList`。明細包含 `orderItemId`、`orderId`、`productId`、`quantity`、`amount`。
 
-`GET /users/{userId}/orders`，不需要 Request Body。
+訂單依 `created_date DESC, order_id DESC` 排序，明細依 `order_item_id ASC` 排序。存在的使用者若沒有訂單，回傳 `200` 與 `[]`。
 
-成功回傳 `200` 與訂單陣列，每張訂單包含 `orderId`、`userId`、`totalAmount`、
-`createdDate`、`lastModifiedDate` 和 `orderItemList`。明細包含
-`orderItemId`、`orderId`、`productId`、`quantity`、`amount`。
+### 常見錯誤狀態
 
-訂單依 `created_date DESC, order_id DESC` 排序，明細依 `order_item_id ASC` 排序。
-使用者沒有訂單時回傳 `200` 與 `[]`；使用者不存在回傳 `404`；ID 不是整數回傳 `400`。
-目前未分頁，依訂單逐筆查詢明細，也尚未驗證登入身分。
+| 狀態 | 情境 |
+| --- | --- |
+| 400 | 參數驗證失敗、非法分類／排序、ID 不是整數、註冊 Email 已存在 |
+| 400 | 下單商品不存在、庫存不足、數量或金額超過 INT 上限 |
+| 401 | 登入 Email 不存在或密碼錯誤 |
+| 404 | 查詢／修改的商品不存在，或下單／查訂單的使用者不存在 |
 
-`MALL_DB_TEST=true ./mvnw -Dtest=OrderQueryIntegrationTest test` 可驗證指定使用者的
-訂單篩選、排序與明細對應。測試資料交易回滾，自增 ID 可能跳號。
+## 測試
+
+一般測試：
+
+```bash
+./mvnw test
+```
+
+包含 Controller 的 HTTP 行為、Service 邏輯、RowMapper 與應用程式 Context 載入測試。MySQL 整合測試預設跳過；Context 載入仍需要可用的 datasource 設定。
+
+需要驗證真實 MySQL 存取時，先完成建表與連線設定，建議使用獨立的測試資料庫：
+
+```bash
+MALL_DB_TEST=true ./mvnw test
+```
+
+也可指定訂單相關測試：
+
+```bash
+MALL_DB_TEST=true ./mvnw -Dtest=OrderIntegrationTest,OrderQueryIntegrationTest test
+```
+
+整合測試涵蓋商品新增／修改／刪除／分類、會員註冊、訂單與庫存回滾，以及訂單查詢。測試使用交易回滾或清理自行建立的資料；MySQL 自增 ID 仍可能跳號。一般測試通過不代表 MySQL 整合測試已通過。
+
+## 目前限制與後續方向
+
+此專案目前定位為後端實作練習，以下項目尚未完成：
+
+- **密碼安全**：目前使用 MD5 雜湊，僅適合練習；正式系統應改用 BCrypt 或 Argon2 等密碼雜湊方案。
+- **登入與授權**：登入僅核對帳密，未建立 Session／JWT；商品操作與訂單 API 尚無權限保護，URL 的 `userId` 不代表已驗證身分。
+- **註冊競態處理**：已有 Email 預查與資料庫唯一限制，但並行註冊造成的唯一限制衝突尚未轉為一致的 HTTP 錯誤。
+- **訂單查詢效率**：目前未分頁，且逐張訂單查詢明細，可再改為批次查詢。
+- **工程化**：可補上資料庫 migration、統一錯誤回應、OpenAPI 文件與 CI 自動測試。
+- **電商流程**：尚未提供購物車、付款、取消訂單或退款功能。
