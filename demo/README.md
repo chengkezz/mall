@@ -1,4 +1,4 @@
-# Mall｜電商後端 REST API
+# Spring Boot Mall｜電商後端 REST API
 
 以 **Java、Spring Boot、Spring JDBC 與 MySQL** 實作的電商後端練習專案，涵蓋商品管理、會員註冊與登入、訂單建立及查詢。採用 Controller → Service → DAO 分層，透過手寫 SQL 練習資料存取、條件查詢與交易控制。
 
