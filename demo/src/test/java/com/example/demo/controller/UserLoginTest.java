@@ -43,7 +43,7 @@ class UserLoginTest {
         User user = new User();
         user.setUserId(42);
         user.setEmail("login@example.com");
-        user.setPassword("test-password");
+        user.setPassword("dfb450efddbb5387197c84460623675b");
         when(dao.getUserByEmail("login@example.com")).thenReturn(user);
         mvc.perform(post("/users/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"login@example.com\",\"password\":\"test-password\"}"))
@@ -60,7 +60,7 @@ class UserLoginTest {
     void rejectsUnknownEmailOrWrongPasswordAndLogsWarn(boolean exists) throws Exception {
         if (exists) {
             User user = new User();
-            user.setPassword("stored-secret");
+            user.setPassword("d6275867af19549fcc7106a91db4fe72");
             when(dao.getUserByEmail("login@example.com")).thenReturn(user);
         }
         Logger logger = (Logger) LoggerFactory.getLogger(UserServiceImpl.class);

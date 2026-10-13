@@ -140,7 +140,7 @@ Body 與新增商品相同，需提供全部必填欄位。省略 `description` 
 
 email 與 password 使用 `@NotBlank` 驗證，null、空字串或純空白回傳 400。成功回傳 201 與 User 的 ID、email、建立及修改時間，password 使用 `@JsonIgnore` 排除。
 
-目前僅實作基本流程：密碼原值儲存，尚未加入雜湊或資料庫唯一限制衝突的例外轉換。資料庫 email 唯一限制仍生效。
+註冊時在 Service 將密碼以 UTF-8 編碼轉成 MD5（32 位小寫十六進位）後儲存；回應不包含密碼。資料庫 email 唯一限制仍生效，尚未加入唯一限制衝突的例外轉換。MD5 僅供此練習使用，不適合正式系統的密碼儲存。
 
 `MALL_DB_TEST=true ./mvnw -Dtest=UserRegistrationIntegrationTest test` 可執行 MySQL 註冊整合測試；測試使用隨機 email 並交易回滾，自增 ID 可能跳號。
 
@@ -158,4 +158,4 @@ email 與 password 使用 `@NotBlank` 驗證，null、空字串或純空白回�
 
 Email 與密碼必填，Email 須符合 `@Email` 格式，輸入不合法回傳 400。帳密正確回傳 200 與 User（不包含 password）；Email 不存在或密碼錯誤回傳 401，後端 WARN 記錄 Email 與失敗原因，不記錄密碼。
 
-目前沿用資料庫中的原始密碼進行字串比較，僅核對帳密，不建立 Session 或 JWT，也不會讓其他 API 自動具有登入保護。
+登入請傳原始密碼，Service 會以 UTF-8 編碼計算 MD5，再與資料庫中的雜湊比對。既有明文密碼未轉換，請用新註冊帳號測試。此功能僅核對帳密，不建立 Session 或 JWT，也不會讓其他 API 自動具有登入保護。

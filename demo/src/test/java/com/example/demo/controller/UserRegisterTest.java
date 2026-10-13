@@ -36,7 +36,7 @@ class UserRegisterTest {
         User user = new User();
         user.setUserId(42);
         user.setEmail("test@example.com");
-        user.setPassword("test-password");
+        user.setPassword("dfb450efddbb5387197c84460623675b");
         when(dao.createUser(any())).thenReturn(42);
         when(dao.getUserById(42)).thenReturn(user);
         mvc.perform(post("/users/register").contentType(MediaType.APPLICATION_JSON)
@@ -48,7 +48,7 @@ class UserRegisterTest {
         var order = inOrder(dao);
         order.verify(dao).getUserByEmail("test@example.com");
         order.verify(dao).createUser(argThat(r -> "test@example.com".equals(r.getEmail())
-                && "test-password".equals(r.getPassword())));
+                && "dfb450efddbb5387197c84460623675b".equals(r.getPassword())));
         order.verify(dao).getUserById(42);
     }
 

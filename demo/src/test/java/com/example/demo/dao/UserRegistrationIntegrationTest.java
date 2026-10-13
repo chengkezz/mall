@@ -32,7 +32,12 @@ class UserRegistrationIntegrationTest {
         assertNotNull(user);
         assertEquals(id, user.getUserId());
         assertEquals(request.getEmail(), user.getEmail());
-        assertEquals(request.getPassword(), user.getPassword());
+        assertEquals("e057768c2e575d28b5a1586e9da816dd", user.getPassword());
+        assertEquals("test-only-password", request.getPassword());
+        com.example.demo.dto.UserLoginRequest login = new com.example.demo.dto.UserLoginRequest();
+        login.setEmail(request.getEmail());
+        login.setPassword(request.getPassword());
+        assertEquals(id, service.login(login).getUserId());
         assertNotNull(user.getCreatedDate());
         assertEquals(user.getCreatedDate(), user.getLastModifiedDate());
         assertNull(dao.getUserById(-1));
