@@ -159,3 +159,21 @@ email 與 password 使用 `@NotBlank` 驗證，null、空字串或純空白回�
 Email 與密碼必填，Email 須符合 `@Email` 格式，輸入不合法回傳 400。帳密正確回傳 200 與 User（不包含 password）；Email 不存在或密碼錯誤回傳 401，後端 WARN 記錄 Email 與失敗原因，不記錄密碼。
 
 登入請傳原始密碼，Service 會以 UTF-8 編碼計算 MD5，再與資料庫中的雜湊比對。既有明文密碼未轉換，請用新註冊帳號測試。此功能僅核對帳密，不建立 Session 或 JWT，也不會讓其他 API 自動具有登入保護。
+
+
+## 建立訂單
+
+`POST /users/{userId}/orders`，使用 `Content-Type: application/json`：
+
+```json
+{"buyItemList":[{"productId":4,"quantity":2},{"productId":7,"quantity":1}]}
+```
+
+成功回傳 `201` 與 `{"orderId":1}`。商品 ID 與數量須為正整數，清單不可為空。
+後端依商品價格計算金額、合併重複商品並扣庫存；訂單、明細與扣庫存使用同一交易。
+使用者不存在回傳 `404`；商品不存在、庫存不足或數量／金額超過 INT 上限回傳 `400`，交易回滾。
+目前 URL 的 userId 僅指定下單使用者，尚未驗證登入身分。
+
+需先建立 `order` 與 `order_item` 資料表。執行
+`MALL_DB_TEST=true ./mvnw -Dtest=OrderIntegrationTest test` 可驗證實際資料與庫存回滾。
+測試僅操作自行建立的資料：成功情境交易回滾，失敗情境使用 finally 清除測試資料；自增 ID 可能跳號。
